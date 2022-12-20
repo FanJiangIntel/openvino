@@ -507,6 +507,30 @@ TEST_P(OVClassSetLogLevelConfigTest, SetConfigNoThrow) {
 // QueryNetwork
 //
 
+TEST_P(OVClassQueryNetworkTest, QueryNetworkResultComparison) {
+    ov::Core ie = createCoreWithTemplate();
+
+    const auto model = ie.read_model("yolo_v4_subgraph.xml");
+    std::set<std::string> expected, actual, diff;
+    for (auto& name : model->get_ops()) {
+        expected.emplace(name->get_friendly_name());
+    }
+    if (target_device == "VPUX") {
+        ov::AnyMap config;
+        config["VPUX_COMPILER_TYPE"] = "MLIR";
+        auto result = ie.query_model(model, "VPUX.3700", config);
+        for (auto& name : result) {
+            actual.emplace(name.first);
+        }
+    } else {
+        auto result = ie.query_model(model, target_device);
+        for (auto& name : result) {
+            actual.emplace(name.first);
+        }
+    }
+    ASSERT_EQ(expected, actual);
+}
+
 TEST_P(OVClassNetworkTestP, QueryNetworkActualThrows) {
     ov::Core ie = createCoreWithTemplate();
     OV_ASSERT_NO_THROW(ie.query_model(actualNetwork, CommonTestUtils::DEVICE_HETERO + std::string(":") + target_device));
